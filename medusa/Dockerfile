@@ -51,4 +51,4 @@ RUN yarn install --production
 # 3. FIXED MIGRATIONS: 
 # Instead of running migrations during 'build' (which fails due to DB connection),
 # we run them at 'runtime' inside the CMD.
-CMD ["sh", "-c", "npx medusa migrations run && yarn run start"]
+CMD ["sh", "-c", "npx medusa db:migrate && yarn run start"]
