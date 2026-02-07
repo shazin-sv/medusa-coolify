@@ -10,12 +10,13 @@ RUN apt-get update && apt-get install -y python3 python3-pip python-is-python3
 
 RUN yarn install --loglevel=error
 
+# This builds the server and the admin panel files
 RUN yarn run build
 
 
 FROM node:23
 
-# Bug https://github.com/coollabsio/coolify/issues/1930
+# Arguments for environment variables
 ARG COOKIE_SECRET
 ARG JWT_SECRET
 ARG STORE_CORS
@@ -28,31 +29,26 @@ ARG DATABASE_URL
 ARG REDIS_URL
 ARG BACKEND_URL
 
-RUN echo "${PORT}"
-
 WORKDIR /app/medusa
 
-RUN mkdir .medusa
-
-# COPY package*.json .yarnrc.yml yarn.lock ./ 
-
-# COPY medusa-config.ts .
-# COPY tsconfig.json .
+# 1. FIXED: Uncommented and corrected these so the server has its "brain"
+# These files are required for the admin panel to be served
+COPY --from=builder /app/medusa/package.json .
+COPY --from=builder /app/medusa/medusa-config.ts .
+COPY --from=builder /app/medusa/tsconfig.json .
+COPY --from=builder /app/medusa/yarn.lock .
 
 RUN apt-get update && apt-get install -y python3 python3-pip python-is-python3
 
+# 2. Copy the built files from the builder stage
 COPY --from=builder /app/medusa/.medusa ./.medusa
 
 WORKDIR /app/medusa/.medusa/server
 
+# Install production dependencies
 RUN yarn install --production
 
-
-# RUN medusa migrations run 
-COPY migrations.sh /app/medusa/.medusa/server/migrations.sh
-RUN chmod +x /app/medusa/.medusa/server/migrations.sh
-RUN /app/medusa/.medusa/server/migrations.sh
-
-RUN rm /app/medusa/.medusa/server/migrations.sh
-
-CMD ["yarn", "run", "start"]
+# 3. FIXED MIGRATIONS: 
+# Instead of running migrations during 'build' (which fails due to DB connection),
+# we run them at 'runtime' inside the CMD.
+CMD ["sh", "-c", "npx medusa migrations run && yarn run start"]
