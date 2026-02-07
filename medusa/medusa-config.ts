@@ -18,7 +18,10 @@ module.exports = defineConfig({
   },
 
   admin: {
+    // This looks at your environment variable
     disable: process.env.DISABLE_ADMIN === "true",
+    // This ensures the backend actually hosts the files
+    serve: true,
     backendUrl: process.env.BACKEND_URL,
   },
 
